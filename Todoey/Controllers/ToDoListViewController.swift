@@ -10,23 +10,34 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
 
-    var itemArray = [String]()
+    var itemArray = [Item]()
+    //array of objects of item instead of array of strings. objects that we make of the class item go into this array
+    
     
     let defaults = UserDefaults.standard
     
-   
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
+        let newItem = Item()
+        newItem.title = "Find Mike"
+        itemArray.append(newItem)
         
-        if let items = defaults.array(forKey: "TodoListArray") as? [String] {
-            
-            itemArray = items
-            
-        }
+        let newItem2 = Item()
+        newItem2.title = "Get Eggos"
+        itemArray.append(newItem2)
+        
+        let newItem3 = Item()
+        newItem3.title = "Destroy Demogorgon"
+        itemArray.append(newItem3)
+        
+        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
+
+            itemArray = items  }
+        
         
     }
 
@@ -38,6 +49,8 @@ class ToDoListViewController: UITableViewController {
         
         return itemArray.count
         
+        
+        
     }
     
     
@@ -46,9 +59,25 @@ class ToDoListViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
-        cell.textLabel?.text = itemArray[indexPath.row]
+        let item = itemArray[indexPath.row]
+        //we did this just to shorten the code, it is not compulsory
+        
+        cell.textLabel?.text = item.title
+        
+        // .title because our itemArray has objects stored in it, as it is an array of objects
         //indexpath.row starts from 0 (as row begins from 0). hence our array will start from 0 index.
-        // indexpath contains properties such as row and section. i.e. the location of the cell. 
+        // indexpath contains properties such as row and section. i.e. the location of the cell.
+        
+        
+        cell.accessoryType = item.done == true ? .checkmark : .none
+        
+        if item.done == true {
+            cell.accessoryType = .checkmark
+        }
+        else {
+            cell.accessoryType = .none
+        }
+        
         
         return cell
     }
@@ -61,23 +90,20 @@ class ToDoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        //print(itemArray[indexPath.row])
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-        // here we say that when we click on this cell at this indexpath of our table view, we want an accessory type called checkmark
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+        // this means that if the value of .done is true, the value will become opposite and will be stored in .done on LHS
+        //all this would happen when a particular row is selected
         
-           tableView.cellForRow(at: indexPath)?.accessoryType = .none
-            
-        }  else {
-            
-            
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-            
-        }
-            
-            
+        
+        tableView.reloadData()
+        // as everytime we set the value of .done when we select the row, we send the data to cellForRowAt and tell them that if .done = true then .checkmark will be there. and this is checked for each cell in cellForRowAt. and we use reload to make it check and fulfill the conditions if required right after we set the .done value over here.
+        
+        
+        
+        
         tableView.deselectRow(at: indexPath, animated: true)
-        
+        //after all the processes are done, this will deselect the row (i.e. remove the highlight on the row)
     }
     
     
@@ -92,7 +118,14 @@ class ToDoListViewController: UITableViewController {
             
             print("success")
             
-            self.itemArray.append(textField.text!)
+            
+            //here we will take a new object called newitem as we need to store the value of textfield.text into newItem.title so that we can put newItem into the array
+            
+            let newItem = Item()
+            
+            newItem.title = textField.text!
+            
+            self.itemArray.append(newItem)
             
             self.defaults.set(self.itemArray, forKey: "TodoListArray")
             

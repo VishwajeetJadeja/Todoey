@@ -14,29 +14,19 @@ class ToDoListViewController: UITableViewController {
     //array of objects of item instead of array of strings. objects that we make of the class item go into this array
     
     
-    let defaults = UserDefaults.standard
     
-    
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+   
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
-        let newItem = Item()
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
         
-        let newItem2 = Item()
-        newItem2.title = "Get Eggos"
-        itemArray.append(newItem2)
+        print(dataFilePath)
         
-        let newItem3 = Item()
-        newItem3.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
         
-        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-
-            itemArray = items  }
+        loadItems()
         
         
     }
@@ -71,14 +61,7 @@ class ToDoListViewController: UITableViewController {
         
         cell.accessoryType = item.done == true ? .checkmark : .none
         
-        if item.done == true {
-            cell.accessoryType = .checkmark
-        }
-        else {
-            cell.accessoryType = .none
-        }
-        
-        
+
         return cell
     }
     
@@ -93,12 +76,10 @@ class ToDoListViewController: UITableViewController {
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         // this means that if the value of .done is true, the value will become opposite and will be stored in .done on LHS
-        //all this would happen when a particular row is selected
+        //all this would happen when a particular row is selected as it is in the function didselectRowAt
         
         
-        tableView.reloadData()
-        // as everytime we set the value of .done when we select the row, we send the data to cellForRowAt and tell them that if .done = true then .checkmark will be there. and this is checked for each cell in cellForRowAt. and we use reload to make it check and fulfill the conditions if required right after we set the .done value over here.
-        
+        saveItems()
         
         
         
@@ -127,12 +108,10 @@ class ToDoListViewController: UITableViewController {
             
             self.itemArray.append(newItem)
             
-            self.defaults.set(self.itemArray, forKey: "TodoListArray")
+            self.saveItems()
             
             
-            self.tableView.reloadData()
-            
-        }
+                }
         
        
             
@@ -151,6 +130,43 @@ class ToDoListViewController: UITableViewController {
         present(alert, animated: true,completion: nil)
         
         
+    }
+    
+    //encode
+    func saveItems() {
+        
+        let encoder = PropertyListEncoder()
+        
+        do {
+            
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+            
+        } catch {
+            
+            print("Error encoding the data. \(error)")
+            
+        }
+        
+        self.tableView.reloadData()
+
+        
+    }
+    
+    
+    //decode
+    func loadItems() {
+        
+        let data = try? Data(contentsOf: dataFilePath!)
+        let decode = PropertyListDecoder()
+        
+        do {
+            itemArray = try decode.decode([Item].self, from: data!)
+        } catch {
+            print("Error decoding the data. \(error)")
+        }
+        
+        // we write [Item] here because,  decode.decode is the method that is going to decode our data from the dataFilePath but we have to specify that what is the datatype of the thing that is going to be decoded and the datatype here is an array of [Item], and because we are not specifying objects, in order to refer to the type which is array of items, we have to write [Item].self
     }
     
 }

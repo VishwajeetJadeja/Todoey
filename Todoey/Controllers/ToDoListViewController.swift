@@ -7,24 +7,33 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController: UITableViewController {
 
     var itemArray = [Item]()
     //array of objects of item instead of array of strings. objects that we make of the class item go into this array
     
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    //here we made appdelegate an object. and it has the property persistentContainer and we are grabbing viewContext of the persistentContainer
     
-    
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    var selectedCategory : Category? {
+        
+        didSet {
+            
+            loadItems()
+            
+        }  //didSet means that the commands inside its curly brackets will run when an item is set in the selectedCategory property
+        
+    }
    
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+       
         
+         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        
-        loadItems()
         
         
     }
@@ -72,9 +81,14 @@ class ToDoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-        // this means that if the value of .done is true, the value will become opposite and will be stored in .done on LHS
-        //all this would happen when a particular row is selected as it is in the function didselectRowAt
+//        context.delete(itemArray[indexPath.row])
+//
+//        itemArray.remove(at: indexPath.row)
+        
+        
+       itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+                // this means that if the value of .done is true, the value will become opposite and will be stored in .done on LHS
+                //all this would happen when a particular row is selected as it is in the function didselectRowAt
         
         
         saveItems()
@@ -100,9 +114,16 @@ class ToDoListViewController: UITableViewController {
             
             //here we will take a new object called newitem as we need to store the value of textfield.text into newItem.title so that we can put newItem into the array
             
-            let newItem = Item()
+            
+            
+            
+            let newItem = Item(context: self.context)
             
             newItem.title = textField.text!
+            
+            newItem.done = false
+            
+            newItem.parentCategory = self.selectedCategory
             
             self.itemArray.append(newItem)
             
@@ -130,21 +151,16 @@ class ToDoListViewController: UITableViewController {
         
     }
     
-    //encode
+
     func saveItems() {
         
-        let encoder = PropertyListEncoder()
+       
         
         do {
-            
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFilePath!)
-            
-        } catch {
-            
-            print("Error encoding the data. \(error)")
-            
-        }
+             try context.save()
+            } catch {
+                print("Error saving context. \(error)")
+                    }
         
         self.tableView.reloadData()
 
@@ -152,27 +168,67 @@ class ToDoListViewController: UITableViewController {
     }
     
     
-    //decode
-    func loadItems() {
+    //here we will give loadItems a default parameter, so if there is no input, it will take the default value into consideration
+    func loadItems(with request : NSFetchRequest<Item> = Item.fetchRequest(), predicate : NSPredicate? = nil) {
+
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
         
-        let data = try? Data(contentsOf: dataFilePath!)
-        let decode = PropertyListDecoder()
+        
+        // if condition will run only if 'predicate' has some value i.e. that was passed as a parameter, else if no value was passed, it will be nil by default and the else block will run.
+        if let anotherPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [anotherPredicate, categoryPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
         
         do {
-            itemArray = try decode.decode([Item].self, from: data!)
+            itemArray = try context.fetch(request)
         } catch {
             print("Error decoding the data. \(error)")
         }
         
-        // we write [Item] here because,  decode.decode is the method that is going to decode our data from the dataFilePath but we have to specify that what is the datatype of the thing that is going to be decoded and the datatype here is an array of [Item], and because we are not specifying objects, in order to refer to the type which is array of items, we have to write [Item].self
-    }
+        tableView.reloadData()
+    
+}
     
 }
 
 
-
-
-
+    extension ToDoListViewController : UISearchBarDelegate {
+        
+        func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+            let request : NSFetchRequest<Item> = Item.fetchRequest()
+            
+            let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+            
+            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+            // used to sort the search results. square brackets because the output we get would be in array.
+            
+            loadItems(with: request , predicate: predicate )
+            
+        }
+        
+        func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+            
+            if searchBar.text?.count == 0 {
+                
+                loadItems()
+                
+               DispatchQueue.main.async {
+                    
+                    searchBar.resignFirstResponder()
+                    
+                }
+                
+                // searchBar.resignFirstResponder() means that searchBar should no longer be the thing that's currently selected. i.e. make the cursor and keyboard go away.
+               //dispatch queue is the manager who assigns this project to different threads. we asked it to get the main queue (main thread) and run the following thing. this will make .resignFirstResponder run in the foreground and not in the background
+                
+            }
+            
+        }
+        
+        
+    }
 
 
 
